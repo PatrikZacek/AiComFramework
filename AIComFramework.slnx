@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/AIComFramework.Samples.Console/AIComFramework.Samples.Console.csproj" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/AIComFramework.Abstractions/AIComFramework.Abstractions.csproj" />
     <Project Path="src/AIComFramework.Core/AIComFramework.Core.csproj" />
