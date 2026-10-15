@@ -35,7 +35,7 @@ public sealed class AiConversation
     }
 
     /// <summary>Inspects a possible next request without execution or state changes. A later send captures state again.</summary>
-    public RequestSnapshot Preview(string prompt, HistoryOptions? history = null, Action<AiPromptComposer>? configureRequest = null)
+    public RequestSnapshot Preview(string prompt, HistoryOptions? history = null, Action<AiRequestConfiguration>? configureRequest = null)
     {
         ArgumentNullException.ThrowIfNull(prompt);
         EnterOperation();
@@ -67,7 +67,7 @@ public sealed class AiConversation
     /// <exception cref="InvalidOperationException">Another operation is active or a history selector returns invalid IDs.</exception>
     /// <exception cref="NotSupportedException">The response contains non-text content or non-assistant roles.</exception>
     public Task<ChatResponse> SendAsync(string prompt, CancellationToken cancellationToken = default,
-        HistoryOptions? history = null, Action<AiPromptComposer>? configureRequest = null) =>
+        HistoryOptions? history = null, Action<AiRequestConfiguration>? configureRequest = null) =>
         SendCoreAsync(prompt, history, configureRequest, request => _executor.SendAsync(request, cancellationToken), cancellationToken);
 
     /// <summary>Sends a typed SDK request and commits its text exchange on success.</summary>
@@ -78,14 +78,14 @@ public sealed class AiConversation
     /// <param name="serializerOptions">Response serializer options; use source-generated metadata for trimmed applications.</param>
     /// <param name="useJsonSchema">Whether the provider should receive a response schema; false uses the SDK JSON fallback.</param>
     public Task<ChatResponse<T>> SendAsync<T>(string prompt, CancellationToken cancellationToken = default,
-        HistoryOptions? history = null, Action<AiPromptComposer>? configureRequest = null,
+        HistoryOptions? history = null, Action<AiRequestConfiguration>? configureRequest = null,
         JsonSerializerOptions? serializerOptions = null, bool useJsonSchema = true) =>
         SendCoreAsync(prompt, history, configureRequest,
             request => _executor.SendAsync<T>(request, serializerOptions ?? JsonSerializerOptions.Default, useJsonSchema, cancellationToken),
             cancellationToken);
 
     private async Task<TResponse> SendCoreAsync<TResponse>(string prompt, HistoryOptions? history,
-        Action<AiPromptComposer>? configureRequest, Func<RequestSnapshot, Task<TResponse>> execute,
+        Action<AiRequestConfiguration>? configureRequest, Func<RequestSnapshot, Task<TResponse>> execute,
         CancellationToken cancellationToken) where TResponse : ChatResponse
     {
         ArgumentNullException.ThrowIfNull(prompt);
@@ -103,13 +103,13 @@ public sealed class AiConversation
         finally { ExitOperation(); }
     }
 
-    private RequestSnapshot CreateRequest(string prompt, HistoryOptions? history, Action<AiPromptComposer>? configureRequest)
+    private RequestSnapshot CreateRequest(string prompt, HistoryOptions? history, Action<AiRequestConfiguration>? configureRequest)
     {
         var selectedHistory = HistorySelection.Create(_turns, _selection.Catalog.DomainId, history ?? new());
         var composer = new AiPromptComposer(_selection.Catalog, _client, _renderer);
         composer.SetSelection(_selection);
         composer.SetHistory(selectedHistory.Messages, selectedHistory.Eligible, selectedHistory.Transmitted);
-        configureRequest?.Invoke(composer);
+        configureRequest?.Invoke(new AiRequestConfiguration(composer));
         return composer.Prompt(prompt).Build();
     }
 

@@ -3,3 +3,4 @@
 .dotnet/
 .nuget/
 TestResults/
+.idea/

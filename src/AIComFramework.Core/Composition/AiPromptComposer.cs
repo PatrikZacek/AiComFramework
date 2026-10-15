@@ -55,6 +55,29 @@ public sealed class AiPromptComposer
         return this;
     }
 
+    /// <summary>Removes the selected role from this request only.</summary>
+    public AiPromptComposer ClearRole()
+    {
+        _selection = _selection with { Role = null };
+        return this;
+    }
+
+    /// <summary>Removes all selected rules and rule sets from this request only.</summary>
+    public AiPromptComposer ClearRules()
+    {
+        _selection = _selection with { Rules = [], RuleSets = [] };
+        return this;
+    }
+
+    /// <summary>Removes selected reusable data and all runtime context from this request.</summary>
+    public AiPromptComposer ClearContexts()
+    {
+        _selection = _selection with { Contexts = [] };
+        _trusted.Clear();
+        _data.Clear();
+        return this;
+    }
+
     /// <summary>Adds explicit developer-controlled instructions to the system message.</summary>
     public AiPromptComposer AddContext(Trusted value)
     {

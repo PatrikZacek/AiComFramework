@@ -21,8 +21,8 @@ public abstract class AiContext
         }, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
-    /// <summary>Gets the context type's full name, used as the domain identity.</summary>
-    public string DomainId => GetType().FullName ?? GetType().Name;
+    /// <summary>Gets the assembly simple name and full context type name, excluding assembly version.</summary>
+    public string DomainId => $"{GetType().Assembly.GetName().Name}:{GetType().FullName ?? GetType().Name}";
 
     /// <summary>Registers the typed definitions exposed by the derived context.</summary>
     protected abstract void OnConfiguring(AiContextBuilder builder);

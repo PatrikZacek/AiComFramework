@@ -6,6 +6,8 @@ internal static class ConversationExchange
 {
     internal static ImmutableArray<MessageSnapshot> Capture(RequestSnapshot request, ChatResponse response)
     {
+        if (response.Messages.Count == 0)
+            throw new InvalidOperationException("A completed conversation turn requires an assistant response.");
         var exchange = ImmutableArray.CreateBuilder<MessageSnapshot>();
         exchange.Add(request.Messages[^1]);
         foreach (var message in response.Messages)

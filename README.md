@@ -101,7 +101,7 @@ await conversation.SendAsync("Can you check my invoice?");
 var state = conversation.GetState(); // All three completed turns.
 ```
 
-`UseContext` clears active roles, rules and reusable data. It preserves full history. The first billing request has no eligible support turns. Returning to Support makes its previous turns eligible again; a domain is identified by the context type's full name, not by its instance or a tenant identity.
+`UseContext` clears active roles, rules and reusable data. It preserves full history. The first billing request has no eligible support turns. Returning to Support makes its previous turns eligible again; a domain is identified by its assembly simple name plus the context type's full name (without assembly version), not by its instance or a tenant identity.
 
 Sharing is explicit and per request:
 
@@ -116,13 +116,13 @@ Only original user prompts and assistant replies are replayed; old system instru
 
 `EligibleTurnIds` and `TransmittedTurnIds` record separate decisions. The default selector retains the newest 20 eligible turns. `RecentHistory(0)` sends none; `IHistorySelector` permits custom deterministic selection within eligibility.
 
-Conversation sends, previews and configuration reject overlapping operations. Configuration changes are transactional; failed/canceled sends add no turn. `GetState()` remains available during a send and returns committed state. A preview is not a reservation: a subsequent send builds a new snapshot. Local `configureRequest` overrides do not persist, and the `SendAsync` prompt argument remains the final user message.
+Conversation sends, previews and configuration reject overlapping operations. Configuration changes are transactional; failed/canceled sends add no turn. `GetState()` remains available during a send and returns committed state. A preview is not a reservation: a subsequent send builds a new snapshot. Local `configureRequest` overrides use `AiRequestConfiguration`, which cannot execute requests or replace the user prompt. Overrides do not persist. Use `ClearRole()`, `ClearRules()` and `ClearContexts()` to omit active selections for one request; `ClearRules().WithRule(alternative)` can replace an exclusive rule without changing the conversation configuration. Callback builders are operation-local and must not be mutated concurrently.
 
 ## Structured responses and providers
 
 `await composer.SendAsync<YourDto>(cancellationToken: token)` uses the SDK structured-output extension and returns `ChatResponse<YourDto>`. Read `Result` for the typed value and `Usage` for actual provider-reported usage. Deserialization is validated before recording a typed conversation turn. Pass `useJsonSchema: false` for the SDK JSON-only fallback; schema support depends on the provider.
 
-Configure model/provider defaults in your registered client or its middleware. The framework neither replaces `IChatClient` nor owns its lifetime. Provider exceptions and cancellation propagate. No real API credentials are needed by the tests or sample.
+Configure model/provider defaults in your registered client or its middleware. The framework neither replaces `IChatClient` nor owns its lifetime. Provider exceptions and cancellation propagate. Cancellation is checked before dispatch and after provider completion, including for clients that return after cancellation. An empty response message list or non-assistant/non-text content cannot be recorded as a completed conversation turn. No real API credentials are needed by the tests or sample.
 
 ## Trust and limitations
 

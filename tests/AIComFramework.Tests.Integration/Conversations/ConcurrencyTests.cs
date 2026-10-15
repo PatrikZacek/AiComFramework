@@ -24,6 +24,7 @@ public sealed class ConcurrencyTests
         {
             await Assert.ThrowsAsync<InvalidOperationException>(() => conversation.SendAsync("second"));
             Assert.Throws<InvalidOperationException>(() => conversation.Configure(config => config.WithRole(context.Specialist)));
+            Assert.Throws<InvalidOperationException>(() => conversation.Preview("preview"));
             Assert.Empty(conversation.GetState().Turns);
         }
         finally { release.TrySetResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, "done"))); }

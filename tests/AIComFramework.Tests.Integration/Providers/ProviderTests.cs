@@ -8,6 +8,64 @@ namespace AIComFramework.Tests.Integration.Providers;
 /// <summary>Verifies the installed Microsoft SDK boundary with deterministic clients.</summary>
 public sealed class ProviderTests
 {
+    /// <summary>Pre-canceled one-shot requests never dispatch, even to a client that ignores cancellation.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task PreCanceledRequestDoesNotDispatch(bool typed)
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var client = new TestChatClient { Respond = (_, _, _) => Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, "{}"))) };
+        var composer = new SupportContext().Compose(client).Prompt("question");
+        if (typed)
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => composer.SendAsync<Answer>(cancellationToken: cancellation.Token));
+        else
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => composer.SendAsync(cancellation.Token));
+        Assert.Empty(client.Requests);
+    }
+
+    /// <summary>A client that returns after cancellation cannot make a canceled operation succeed.</summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task LateProviderResponseObservesCancellation(bool typed)
+    {
+        using var cancellation = new CancellationTokenSource();
+        var client = new TestChatClient { Respond = (_, _, _) =>
+        {
+            cancellation.Cancel();
+            return Task.FromResult(new ChatResponse(new ChatMessage(ChatRole.Assistant, "{\"Value\":\"late\"}")));
+        } };
+        var composer = new SupportContext().Compose(client).Prompt("question");
+        if (typed)
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => composer.SendAsync<Answer>(cancellationToken: cancellation.Token));
+        else
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() => composer.SendAsync(cancellation.Token));
+    }
+
+    /// <summary>An absent assistant response is not a completed conversation turn.</summary>
+    [Fact]
+    public async Task EmptyResponseDoesNotCommit()
+    {
+        var client = new TestChatClient { Respond = (_, _, _) => Task.FromResult(new ChatResponse()) };
+        var conversation = new AiConversationFactory(client, new JsonUntrustedRenderer()).Create(new SupportContext());
+        await Assert.ThrowsAsync<InvalidOperationException>(() => conversation.SendAsync("question"));
+        Assert.Empty(conversation.GetState().Turns);
+    }
+
+    /// <summary>Tool content fails explicitly instead of being silently dropped from history.</summary>
+    [Fact]
+    public async Task NonTextResponseDoesNotCommit()
+    {
+        var response = new ChatResponse(new ChatMessage(ChatRole.Assistant,
+            [new TextContent("partial"), new FunctionCallContent("call", "tool", null)]));
+        var client = new TestChatClient { Respond = (_, _, _) => Task.FromResult(response) };
+        var conversation = new AiConversationFactory(client, new JsonUntrustedRenderer()).Create(new SupportContext());
+        await Assert.ThrowsAsync<NotSupportedException>(() => conversation.SendAsync("question"));
+        Assert.Empty(conversation.GetState().Turns);
+    }
+
     /// <summary>One-shot calls propagate cancellation and actual usage metadata.</summary>
     [Fact]
     public async Task OneShotPreservesTokenAndUsage()

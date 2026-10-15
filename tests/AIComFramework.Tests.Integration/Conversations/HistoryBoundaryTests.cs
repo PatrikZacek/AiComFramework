@@ -9,6 +9,22 @@ namespace AIComFramework.Tests.Integration.Conversations;
 /// <summary>Verifies validation of custom strategies and exported state.</summary>
 public sealed class HistoryBoundaryTests
 {
+    /// <summary>Identical full type names in different assemblies must not share history implicitly.</summary>
+    [Fact]
+    public async Task AssemblyIdentitySeparatesSameNamedDomains()
+    {
+        var first = DynamicDomainContext.Create("SupportLibrary");
+        var second = DynamicDomainContext.Create("BillingLibrary");
+        Assert.Equal(first.GetType().FullName, second.GetType().FullName);
+        Assert.NotEqual(first.DomainId, second.DomainId);
+        var conversation = new AiConversationFactory(new TestChatClient(), new JsonUntrustedRenderer()).Create(first);
+        await conversation.SendAsync("private");
+        conversation.Configure(config => config.UseContext(second));
+        await conversation.SendAsync("different domain");
+        Assert.Empty(conversation.GetState().Turns[1].Request.EligibleTurnIds);
+        Assert.DoesNotContain(conversation.GetState().Turns[1].Request.Messages, message => message.Text.Contains("private"));
+    }
+
     /// <summary>A strategy cannot add ineligible turns, duplicate IDs or reverse order.</summary>
     [Theory]
     [InlineData(new long[] { 99 })]
