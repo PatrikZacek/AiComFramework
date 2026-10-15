@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AIComFramework.Abstractions/AIComFramework.Abstractions.csproj" />
+    <Project Path="src/AIComFramework.Core/AIComFramework.Core.csproj" />
+  </Folder>
+</Solution>
