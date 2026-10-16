@@ -6,10 +6,14 @@ using AIComFramework.Samples.Console.Providers;
 using AIComFramework.Samples.Console.Support;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using AIComFramework.Serialization.Json.DependencyInjection;
+using AIComFramework.Samples.Console.Persistence;
 
 var services = new ServiceCollection();
 services.AddSingleton<IChatClient, DemoChatClient>();
 services.AddAIComFramework().AddAiContext<SupportAiContext>().AddAiContext<BillingAiContext>();
+services.AddAiComJsonSerialization();
+services.AddSingleton<InMemoryDefinitionRepository>();
 using var provider = services.BuildServiceProvider(new ServiceProviderOptions
 {
     ValidateScopes = true,
@@ -29,6 +33,20 @@ Console.WriteLine((await composer.SendAsync()).Text);
 var factory = scope.ServiceProvider.GetRequiredService<AiConversationFactory>();
 var conversation = factory.Create(support, config => config.WithRole(support.SupportAgent).WithRules(support.Baseline));
 Console.WriteLine((await conversation.SendAsync("I need to return order 42.")).Text);
+
+// Simulate an authorized external content edit. No content revision or new CLR definition is needed.
+var repository = scope.ServiceProvider.GetRequiredService<InMemoryDefinitionRepository>();
+var definitions = support.ExportDefinitions();
+repository.Save(definitions with
+{
+    Roles = [definitions.Roles[0] with { Instructions = "Help with returns. Explain the updated 60-day return policy." }]
+});
+support.ApplyDefinitions(repository.Load());
+var updated = support.Compose(client).WithRole<SupportAgentRole>().WithRules<ReturnsRuleSet>().Prompt("What changed?");
+Console.WriteLine($"Updated request: {updated.Build().Messages[0].Text}");
+Console.WriteLine($"Previously composed request: {composer.Build().Messages[0].Text}");
+conversation.Configure(config => config.RefreshDefinitions(support));
+
 Console.WriteLine((await conversation.SendAsync("It arrived yesterday.")).Text);
 conversation.Configure(config => config.UseContext(billing).WithRole(billing.Specialist).WithRules(billing.Invoices));
 Console.WriteLine((await conversation.SendAsync("Can you check my invoice?")).Text);

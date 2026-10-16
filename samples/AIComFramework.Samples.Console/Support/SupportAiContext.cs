@@ -5,6 +5,9 @@ namespace AIComFramework.Samples.Console.Support;
 /// <summary>Reusable support catalog.</summary>
 public sealed class SupportAiContext : AiContext
 {
+    /// <inheritdoc />
+    public override string DomainId => "sample.support";
+
     /// <summary>Creates composed return definitions.</summary>
     public SupportAiContext() => Returns = new(Baseline);
 

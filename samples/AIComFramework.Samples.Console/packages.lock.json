@@ -69,6 +69,13 @@
           "Microsoft.Extensions.AI": "[10.11.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.13, )"
         }
+      },
+      "aicomframework.serialization.json": {
+        "type": "Project",
+        "dependencies": {
+          "AIComFramework.Abstractions": "[1.0.0, )",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.13, )"
+        }
       }
     }
   }

@@ -128,8 +128,48 @@ Configure model/provider defaults in your registered client or its middleware. T
 
 Raw prompts and `Untrusted.From` values remain user data in JSON envelopes with provenance. `Trusted.From` is an explicit application-controlled instruction path. JSON escaping and typed wrappers prevent some accidental composition errors; they do not eliminate semantic prompt injection.
 
-This implementation supports complete text requests and text conversation responses. Streaming, tools, multimodal conversation history, durable storage, runtime restoration, semantic selection and token budgeting are deferred. State is exportable as JSON data, but that is not a durable persistence implementation. Full history is unbounded in memory; applications should bound session lifetimes. Context type names and definition IDs must be versioned/resolved by any future storage adapter. Metadata IDs should not contain secrets, and object destructuring/JSON serialization exposes sensitive snapshot properties even though `ToString()` is redacted.
+This implementation supports complete text requests and text conversation responses. Streaming, tools, multimodal conversation history, durable conversation storage, conversation restoration, semantic selection and token budgeting are deferred. Full history is unbounded in memory; applications should bound session lifetimes. Metadata IDs should not contain secrets. Definition snapshots and their JSON contain prompt text and data; treat them as sensitive content.
 
 No measured token, cost or quality improvement is claimed.
 
 The solution separates provider-independent definition/snapshot contracts in `AIComFramework.Abstractions` from registration, composition and conversation behavior in `AIComFramework.Core`. Test projects exercise isolated invariants and cross-component SDK/DI behavior. The executable sample demonstrates the public API with two domains. All projects enable nullable analysis, XML documentation and warnings as errors.
+
+## Optional definition serialization
+
+Reference `AIComFramework.Serialization.Json` only when you need JSON definitions. Core has no reference to that module, storage providers, or databases. The shared `IAiDefinitionSerializer` and immutable snapshot records live in `AIComFramework.Abstractions.Serialization`.
+
+For persisted domains, override `AiContext.DomainId` with an application-owned constant such as `"support"`. The legacy default remains the assembly simple name and full context type name for compatibility. Definition IDs are scoped by domain and kind: a rule and rule set may share an ID. Keep these identities stable when editing content or renaming CLR classes; no assembly-qualified type names are persisted or activated.
+
+```csharp
+using AIComFramework.Abstractions.Serialization;
+using AIComFramework.Serialization.Json.DependencyInjection;
+
+services.AddAIComFramework().AddAiContext<SupportAiContext>();
+services.AddAiComJsonSerialization();
+
+// Inject this into your own file, SQL, Redis, or configuration repository.
+IAiDefinitionSerializer serializer = provider.GetRequiredService<IAiDefinitionSerializer>();
+string storedContent = serializer.Serialize(support.ExportDefinitions());
+
+// Application retrieves content and establishes that its source is authorized.
+var loaded = serializer.Deserialize(storedContent);
+support.ApplyDefinitions(loaded);
+
+var next = support.Compose(client)
+    .WithRole<SupportAgentRole>()
+    .WithRules<ReturnsRuleSet>()
+    .Prompt("What is the return policy?");
+
+// Between turns, explicitly adopt the newest definitions without losing history or selections.
+conversation.Configure(config => config.RefreshDefinitions(support));
+```
+
+The executable sample's `InMemoryDefinitionRepository` demonstrates saving, editing, loading and applying content through an injected serializer. Replace that consumer-owned repository with your storage implementation. Updating natural-language text requires neither recompilation, redeployment, a revision field, nor a schema-version change. Loading and refresh are application-triggered; there is no polling or storage monitoring.
+
+Snapshots include all roles, rules, flattened ordered rule-set references, reusable context data and provenance. Rule-set nesting is already flattened by the existing domain model; the snapshot preserves its effective composition and shared rule identities. Schema 1 supports plain text only. Full snapshots are required: missing or unknown IDs, duplicate IDs within a kind, unknown JSON properties, duplicate JSON properties, null required values, unsupported schemas/formats and invalid rule references fail validation. Applying content also requires the same registered exclusive groups and ordered set membership. Structural changes require updating the application's contracts; text, data and provenance can change independently. JSON failures raise `JsonException` (empty arguments raise `ArgumentException`); contract resolution failures raise actionable `ArgumentException` messages before any active state changes.
+
+Deserialization returns data and does not authorize it. Calling `ApplyDefinitions` is the application's explicit decision to use an authorized source for registered instruction slots. Roles and rules remain instruction slots; reusable contexts and their provenance remain untrusted user data. External content cannot introduce executable behavior, change trust categories, create CLR types, or replace runtime services. This does not provide complete prompt-injection protection.
+
+Each `Compose` call captures a single immutable content snapshot, even if selections or `Build` happen after an update. Successful updates publish atomically per context instance; concurrent updates use last-publication-wins semantics. Existing composers, built requests and in-flight sends retain their original content. Registered definition objects remain immutable contracts, so their instruction properties show compiled defaults; use `ExportDefinitions` to inspect active content. Typed generic selection requires exactly one registered definition assignable to that type; existing property-based selections remain supported.
+
+Conversations retain their current snapshot until `RefreshDefinitions` is called with their original domain context instance. Refresh preserves selected roles, rules, context data and history, and follows the existing rule that configuration cannot overlap a send. `UseContext` also captures current definitions but clears selections, as before. Failed updates and refreshes leave active state unchanged. Conversation history serialization remains separate from definition serialization.
