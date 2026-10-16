@@ -37,17 +37,24 @@ Console.WriteLine((await conversation.SendAsync("I need to return order 42.")).T
 // Simulate an authorized external content edit. No content revision or new CLR definition is needed.
 var repository = scope.ServiceProvider.GetRequiredService<InMemoryDefinitionRepository>();
 var definitions = support.ExportDefinitions();
-repository.Save(definitions with
+repository.Save(definitions);
+var storedDefinitions = repository.Load();
+repository.Save(storedDefinitions with
 {
-    Roles = [definitions.Roles[0] with { Instructions = "Help with returns. Explain the updated 60-day return policy." }]
+    Roles = [storedDefinitions.Roles[0] with { Instructions = "Help with returns. Explain the updated 60-day return policy." }]
 });
 support.ApplyDefinitions(repository.Load());
 var updated = support.Compose(client).WithRole<SupportAgentRole>().WithRules<ReturnsRuleSet>().Prompt("What changed?");
 Console.WriteLine($"Updated request: {updated.Build().Messages[0].Text}");
 Console.WriteLine($"Previously composed request: {composer.Build().Messages[0].Text}");
+Console.WriteLine((await updated.SendAsync()).Text);
 conversation.Configure(config => config.RefreshDefinitions(support));
 
 Console.WriteLine((await conversation.SendAsync("It arrived yesterday.")).Text);
+var refreshedTurn = conversation.GetState().Turns[^1];
+if (!refreshedTurn.Request.Messages[0].Text.Contains("60-day", StringComparison.Ordinal) ||
+    !refreshedTurn.Request.TransmittedTurnIds.Contains(1))
+    throw new InvalidOperationException("Definition refresh must update instructions and preserve eligible history.");
 conversation.Configure(config => config.UseContext(billing).WithRole(billing.Specialist).WithRules(billing.Invoices));
 Console.WriteLine((await conversation.SendAsync("Can you check my invoice?")).Text);
 
