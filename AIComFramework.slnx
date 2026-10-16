@@ -5,6 +5,7 @@
   <Folder Name="/src/">
     <Project Path="src/AIComFramework.Abstractions/AIComFramework.Abstractions.csproj" />
     <Project Path="src/AIComFramework.Core/AIComFramework.Core.csproj" />
+    <Project Path="src/AIComFramework.Serialization.Json/AIComFramework.Serialization.Json.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AIComFramework.Tests.Integration/AIComFramework.Tests.Integration.csproj" />
