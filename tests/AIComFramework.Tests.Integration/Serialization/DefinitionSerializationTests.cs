@@ -17,6 +17,39 @@ public sealed class DefinitionSerializationTests
 {
     private readonly JsonAiDefinitionSerializer _serializer = new();
 
+    /// <summary>Invalid application domain IDs fail before any request or export can use them.</summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData(" ")]
+    [InlineData(null)]
+    public void InvalidDomainContractsFailEarly(string? domainId)
+    {
+        var context = new NamedDomainContext(domainId!);
+        Assert.ThrowsAny<ArgumentException>(context.Validate);
+        Assert.ThrowsAny<ArgumentException>(() => context.ExportDefinitions());
+    }
+
+    /// <summary>Content errors identify the affected definition and field, without echoing prompt content.</summary>
+    [Theory]
+    [InlineData("role", "agent", "Instructions")]
+    [InlineData("rule", "policy", "Instructions")]
+    [InlineData("context", "catalog", "Text")]
+    public void ValidationErrorsIdentifyTheInvalidSlot(string kind, string id, string field)
+    {
+        var context = new SerializableSupportContext();
+        var snapshot = context.ExportDefinitions();
+        var invalid = kind switch
+        {
+            "role" => snapshot with { Roles = [new(id, " ")] },
+            "rule" => snapshot with { Rules = [new(id, "")] },
+            _ => snapshot with { Contexts = [new(id, null!)] }
+        };
+        var error = Assert.ThrowsAny<ArgumentException>(() => context.ApplyDefinitions(invalid));
+        Assert.Contains(id, error.Message);
+        Assert.Contains(field, error.Message);
+        Assert.Same(snapshot, context.ExportDefinitions());
+    }
+
     /// <summary>All declarative definitions and flattened relationships survive a round trip without revisions.</summary>
     [Fact]
     public void RoundTripPreservesDefinitionsAndObservableComposition()

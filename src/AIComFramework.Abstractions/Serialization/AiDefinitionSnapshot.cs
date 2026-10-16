@@ -30,13 +30,15 @@ public sealed record AiDefinitionSnapshot(
         ValidateIds(Rules, rule => rule.Id, "rule");
         ValidateIds(RuleSets, set => set.Id, "rule set");
         ValidateIds(Contexts, context => context.Id, "context data");
-        foreach (var role in Roles) ArgumentException.ThrowIfNullOrWhiteSpace(role.Instructions);
+        foreach (var role in Roles) RequireText(role.Instructions, $"Role '{role.Id}'", nameof(role.Instructions));
         foreach (var rule in Rules)
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(rule.Instructions);
-            if (rule.ExclusiveGroup is not null) ArgumentException.ThrowIfNullOrWhiteSpace(rule.ExclusiveGroup);
+            RequireText(rule.Instructions, $"Rule '{rule.Id}'", nameof(rule.Instructions));
+            if (rule.ExclusiveGroup is not null) RequireText(rule.ExclusiveGroup, $"Rule '{rule.Id}'", nameof(rule.ExclusiveGroup));
         }
-        foreach (var context in Contexts) ArgumentNullException.ThrowIfNull(context.Text);
+        foreach (var context in Contexts)
+            if (context.Text is null)
+                throw new ArgumentException($"Context data '{context.Id}' requires non-null Text; use an empty string for empty data.");
         var rules = Rules.ToDictionary(rule => rule.Id, StringComparer.Ordinal);
         foreach (var set in RuleSets)
         {
@@ -60,8 +62,15 @@ public sealed record AiDefinitionSnapshot(
         {
             if (value is null) throw new ArgumentException($"Null {kind} definition.");
             var identity = id(value);
-            ArgumentException.ThrowIfNullOrWhiteSpace(identity);
+            if (string.IsNullOrWhiteSpace(identity))
+                throw new ArgumentException($"Invalid {kind} identity; supply a non-empty stable ID.");
             if (!ids.Add(identity)) throw new ArgumentException($"Duplicate {kind} identity '{identity}'.");
         }
+    }
+
+    private static void RequireText(string value, string slot, string field)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            throw new ArgumentException($"{slot} requires non-empty {field}.");
     }
 }

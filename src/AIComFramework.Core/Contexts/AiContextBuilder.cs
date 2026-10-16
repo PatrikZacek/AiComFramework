@@ -46,9 +46,12 @@ public sealed class AiContextBuilder
         return this;
     }
 
-    internal DefinitionCatalog Build(string domainId) => new(domainId,
-        _roles.Values.ToImmutableArray(), _rules.Values.ToImmutableArray(), _sets.Values.ToImmutableArray(),
-        _contexts.Values.ToImmutableArray());
+    internal DefinitionCatalog Build(string domainId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(domainId);
+        return new(domainId, _roles.Values.ToImmutableArray(), _rules.Values.ToImmutableArray(),
+            _sets.Values.ToImmutableArray(), _contexts.Values.ToImmutableArray());
+    }
 
     private static void Register<T>(Dictionary<string, T> registrations, string id, T definition) where T : class
     {
