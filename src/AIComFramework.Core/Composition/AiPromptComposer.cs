@@ -8,6 +8,22 @@ namespace AIComFramework.Core.Composition;
 /// <summary>Builds one text request. Instances are mutable, local builders and are not thread-safe.</summary>
 public sealed class AiPromptComposer
 {
+    /// <summary>Selects the unique registered definition assignable to the application type.</summary>
+    public AiPromptComposer WithRole<T>() where T : AiRole =>
+        WithRole(_selection.Catalog.Select<T, AiRole>(_selection.Catalog.Roles));
+
+    /// <summary>Selects the unique registered definition assignable to the application type.</summary>
+    public AiPromptComposer WithRules<T>() where T : AiRuleSet =>
+        WithRules(_selection.Catalog.Select<T, AiRuleSet>(_selection.Catalog.RuleSets));
+
+    /// <summary>Selects the unique registered definition assignable to the application type.</summary>
+    public AiPromptComposer WithRule<T>() where T : AiRule =>
+        WithRule(_selection.Catalog.Select<T, AiRule>(_selection.Catalog.Rules));
+
+    /// <summary>Selects the unique registered definition assignable to the application type.</summary>
+    public AiPromptComposer WithContext<T>() where T : AiContextDefinition =>
+        WithContext(_selection.Catalog.Select<T, AiContextDefinition>(_selection.Catalog.Contexts));
+
     private DefinitionSelection _selection;
     private readonly IUntrustedRenderer _renderer;
     private readonly RequestExecutor _executor;
@@ -112,12 +128,17 @@ public sealed class AiPromptComposer
         if (_prompt is null) throw new InvalidOperationException("A user prompt is required.");
         var messages = ImmutableArray.CreateBuilder<MessageSnapshot>();
         var instructions = new List<string>();
-        if (_selection.Role is not null) instructions.Add(_selection.Role.Instructions);
-        instructions.AddRange(_selection.Rules.Select(rule => rule.Instructions));
+        var content = _selection.Catalog.Content;
+        if (_selection.Role is not null) instructions.Add(content.Roles.Single(role => role.Id == _selection.Role.Id).Instructions);
+        instructions.AddRange(_selection.Rules.Select(rule => content.Rules.Single(value => value.Id == rule.Id).Instructions));
         instructions.AddRange(_trusted.Select(value => value.Text));
         if (instructions.Count > 0) messages.Add(new(MessageKind.System, string.Join("\n\n", instructions)));
         messages.AddRange(_history);
-        foreach (var definition in _selection.Contexts) messages.Add(new(MessageKind.User, _renderer.Render(definition.Data)));
+        foreach (var definition in _selection.Contexts)
+        {
+            var data = content.Contexts.Single(value => value.Id == definition.Id);
+            messages.Add(new(MessageKind.User, _renderer.Render(Untrusted.From(data.Text, data.Source))));
+        }
         foreach (var value in _data) messages.Add(new(MessageKind.User, _renderer.Render(value)));
         messages.Add(new(MessageKind.User, _renderer.Render(_prompt)));
         return new(_selection.Snapshot, messages.ToImmutable(), _eligible, _transmitted);

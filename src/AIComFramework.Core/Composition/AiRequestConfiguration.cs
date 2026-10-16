@@ -5,6 +5,34 @@ namespace AIComFramework.Core.Composition;
 /// <summary>Operation-local conversation overrides, without provider execution or history mutation capabilities.</summary>
 public sealed class AiRequestConfiguration
 {
+    /// <summary>Selects the unique registered role assignable to the application type for this request.</summary>
+    public AiRequestConfiguration WithRole<T>() where T : AiRole
+    {
+        _composer.WithRole<T>();
+        return this;
+    }
+
+    /// <summary>Selects the unique registered rule set assignable to the application type for this request.</summary>
+    public AiRequestConfiguration WithRules<T>() where T : AiRuleSet
+    {
+        _composer.WithRules<T>();
+        return this;
+    }
+
+    /// <summary>Selects the unique registered rule assignable to the application type for this request.</summary>
+    public AiRequestConfiguration WithRule<T>() where T : AiRule
+    {
+        _composer.WithRule<T>();
+        return this;
+    }
+
+    /// <summary>Selects the unique registered data definition assignable to the application type for this request.</summary>
+    public AiRequestConfiguration WithContext<T>() where T : AiContextDefinition
+    {
+        _composer.WithContext<T>();
+        return this;
+    }
+
     private readonly AiPromptComposer _composer;
 
     internal AiRequestConfiguration(AiPromptComposer composer) => _composer = composer;
