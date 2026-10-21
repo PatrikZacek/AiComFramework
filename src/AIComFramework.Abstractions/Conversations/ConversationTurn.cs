@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using AIComFramework.Abstractions.Composition;
+using AIComFramework.Abstractions.Validation;
 
 namespace AIComFramework.Abstractions.Conversations;
 
@@ -9,6 +10,9 @@ namespace AIComFramework.Abstractions.Conversations;
 /// <param name="Exchange">Only the original rendered user prompt and assistant replies, eligible for future sharing.</param>
 public sealed record ConversationTurn(long Id, RequestSnapshot Request, ImmutableArray<MessageSnapshot> Exchange)
 {
+    /// <summary>Gets configured domain findings; legacy sends are explicitly NotValidated.</summary>
+    public AiValidationOutcome Validation { get; init; } = AiValidationOutcome.NotValidated;
+
     /// <summary>Returns the turn ID without message content.</summary>
     public override string ToString() => $"Turn {Id}";
 }

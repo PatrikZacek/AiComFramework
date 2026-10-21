@@ -1,4 +1,6 @@
 using AIComFramework.Abstractions.Trust;
+using AIComFramework.Abstractions.Validation;
+using AIComFramework.Core.Validation;
 using AIComFramework.Core.Contexts;
 using AIComFramework.Core.Conversations;
 using AIComFramework.Core.Trust;
@@ -16,6 +18,20 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         services.TryAddSingleton<IUntrustedRenderer, JsonUntrustedRenderer>();
         services.TryAddScoped<AiConversationFactory>();
+        services.TryAddScoped<AiValidationPipeline>();
+        return services;
+    }
+
+    /// <summary>Registers a reusable scoped validator; selection remains explicit per result contract.</summary>
+    /// <typeparam name="T">Candidate type.</typeparam>
+    /// <typeparam name="TValidator">Validator implementation and service identity.</typeparam>
+    /// <param name="services">Application service collection.</param>
+    /// <returns>The service collection for chaining.</returns>
+    public static IServiceCollection AddAiResultValidator<T, TValidator>(this IServiceCollection services)
+        where TValidator : class, IAiResultValidator<T>
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        services.TryAddScoped<TValidator>();
         return services;
     }
 

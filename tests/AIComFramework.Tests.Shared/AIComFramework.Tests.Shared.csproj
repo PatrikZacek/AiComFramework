@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/AIComFramework.Core/AIComFramework.Core.csproj" />
+    <InternalsVisibleTo Include="AIComFramework.Tests.Unit" />
+    <InternalsVisibleTo Include="AIComFramework.Tests.Integration" />
+  </ItemGroup>
+</Project>

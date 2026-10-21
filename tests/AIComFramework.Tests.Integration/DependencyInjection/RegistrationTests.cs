@@ -1,7 +1,7 @@
 using AIComFramework.Abstractions.Trust;
 using AIComFramework.Core.Conversations;
 using AIComFramework.Core.DependencyInjection;
-using AIComFramework.Tests.Fixtures;
+using AIComFramework.Tests.Shared.Fixtures;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 

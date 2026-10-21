@@ -1,6 +1,6 @@
 using Microsoft.Extensions.AI;
 
-namespace AIComFramework.Tests.Fixtures;
+namespace AIComFramework.Tests.Shared.Fixtures;
 
 internal sealed class TestChatClient : IChatClient
 {

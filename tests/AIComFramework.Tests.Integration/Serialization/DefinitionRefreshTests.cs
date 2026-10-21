@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 using AIComFramework.Abstractions.Serialization;
 using AIComFramework.Core.Conversations;
 using AIComFramework.Core.Trust;
-using AIComFramework.Tests.Fixtures;
+using AIComFramework.Tests.Shared.Fixtures;
 
 namespace AIComFramework.Tests.Integration.Serialization;
 

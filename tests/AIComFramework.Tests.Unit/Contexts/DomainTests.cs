@@ -1,7 +1,7 @@
 using AIComFramework.Abstractions.Roles;
 using AIComFramework.Abstractions.Rules;
 using AIComFramework.Core.Contexts;
-using AIComFramework.Tests.Fixtures;
+using AIComFramework.Tests.Shared.Fixtures;
 
 namespace AIComFramework.Tests.Unit.Contexts;
 

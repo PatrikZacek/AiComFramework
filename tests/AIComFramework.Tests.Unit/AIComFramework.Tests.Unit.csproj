@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\AIComFramework.Core\AIComFramework.Core.csproj" />
+    <ProjectReference Include="../AIComFramework.Tests.Shared/AIComFramework.Tests.Shared.csproj" />
   </ItemGroup>
 
 </Project>

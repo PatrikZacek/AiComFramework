@@ -1,4 +1,6 @@
 using System.Text.Json;
+using AIComFramework.Abstractions.Results;
+using AIComFramework.Core.Validation;
 using AIComFramework.Abstractions.Trust;
 using AIComFramework.Core.Contexts;
 using Microsoft.Extensions.AI;
@@ -8,6 +10,12 @@ namespace AIComFramework.Core.Composition;
 /// <summary>Builds one text request. Instances are mutable, local builders and are not thread-safe.</summary>
 public sealed class AiPromptComposer
 {
+    /// <summary>Captures this request with explicit structural and optional domain validation outcomes.</summary>
+    /// <param name="contract">Optional immutable result requirements; omitted means no domain validation.</param>
+    /// <param name="pipeline">Scoped pipeline required only when selecting validators.</param>
+    public AiTypedRequest<T> Expect<T>(AiResultContract<T>? contract = null, AiValidationPipeline? pipeline = null) =>
+        new(_executor, Build(), contract ?? new(), pipeline);
+
     /// <summary>Selects the unique registered definition assignable to the application type.</summary>
     public AiPromptComposer WithRole<T>() where T : AiRole =>
         WithRole(_selection.Catalog.Select<T, AiRole>(_selection.Catalog.Roles));

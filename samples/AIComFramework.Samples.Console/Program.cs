@@ -1,4 +1,5 @@
 using AIComFramework.Abstractions.Trust;
+using AIComFramework.Samples.Console.Validation;
 using AIComFramework.Core.Conversations;
 using AIComFramework.Core.DependencyInjection;
 using AIComFramework.Samples.Console.Billing;
@@ -10,6 +11,7 @@ using AIComFramework.Serialization.Json.DependencyInjection;
 using AIComFramework.Samples.Console.Persistence;
 
 var services = new ServiceCollection();
+await InvoiceValidationDemo.RunAsync();
 services.AddSingleton<IChatClient, DemoChatClient>();
 services.AddAIComFramework().AddAiContext<SupportAiContext>().AddAiContext<BillingAiContext>();
 services.AddAiComJsonSerialization();

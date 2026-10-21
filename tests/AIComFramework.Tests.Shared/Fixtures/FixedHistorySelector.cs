@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using AIComFramework.Abstractions.Conversations;
 
-namespace AIComFramework.Tests.Fixtures;
+namespace AIComFramework.Tests.Shared.Fixtures;
 
 internal sealed class FixedHistorySelector(params long[] ids) : IHistorySelector
 {

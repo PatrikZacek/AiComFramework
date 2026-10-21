@@ -6,7 +6,7 @@ using AIComFramework.Core.DependencyInjection;
 using AIComFramework.Core.Trust;
 using AIComFramework.Serialization.Json;
 using AIComFramework.Serialization.Json.DependencyInjection;
-using AIComFramework.Tests.Fixtures;
+using AIComFramework.Tests.Shared.Fixtures;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 

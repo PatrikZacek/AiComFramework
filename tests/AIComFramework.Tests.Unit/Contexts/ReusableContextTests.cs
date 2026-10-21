@@ -1,6 +1,6 @@
 using AIComFramework.Abstractions.Contexts;
 using AIComFramework.Abstractions.Trust;
-using AIComFramework.Tests.Fixtures;
+using AIComFramework.Tests.Shared.Fixtures;
 
 namespace AIComFramework.Tests.Unit.Contexts;
 

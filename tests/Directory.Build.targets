@@ -1,5 +1,0 @@
-<Project>
-  <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)Fixtures/**/*.cs" Link="Fixtures/%(RecursiveDir)%(Filename)%(Extension)" />
-  </ItemGroup>
-</Project>

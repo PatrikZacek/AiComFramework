@@ -1,6 +1,6 @@
 using AIComFramework.Core.Contexts;
 
-namespace AIComFramework.Tests.Fixtures;
+namespace AIComFramework.Tests.Shared.Fixtures;
 
 internal sealed class NamedDomainContext(string domainId) : AiContext
 {

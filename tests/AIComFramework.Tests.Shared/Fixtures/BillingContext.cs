@@ -2,7 +2,7 @@ using AIComFramework.Abstractions.Roles;
 using AIComFramework.Abstractions.Rules;
 using AIComFramework.Core.Contexts;
 
-namespace AIComFramework.Tests.Fixtures;
+namespace AIComFramework.Tests.Shared.Fixtures;
 
 internal sealed class BillingContext(AiRule? shared = null) : AiContext
 {

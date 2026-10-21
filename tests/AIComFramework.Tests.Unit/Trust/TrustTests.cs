@@ -1,7 +1,7 @@
 using System.Text.Json;
 using AIComFramework.Abstractions.Trust;
 using AIComFramework.Core.Trust;
-using AIComFramework.Tests.Fixtures;
+using AIComFramework.Tests.Shared.Fixtures;
 
 namespace AIComFramework.Tests.Unit.Trust;
 

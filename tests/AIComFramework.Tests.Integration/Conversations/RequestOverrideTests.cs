@@ -3,7 +3,7 @@ using AIComFramework.Abstractions.Trust;
 using AIComFramework.Core.Composition;
 using AIComFramework.Core.Conversations;
 using AIComFramework.Core.Trust;
-using AIComFramework.Tests.Fixtures;
+using AIComFramework.Tests.Shared.Fixtures;
 
 namespace AIComFramework.Tests.Integration.Conversations;
 

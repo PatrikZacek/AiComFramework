@@ -173,6 +173,12 @@
           "AIComFramework.Abstractions": "[1.0.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.13, )"
         }
+      },
+      "aicomframework.tests.shared": {
+        "type": "Project",
+        "dependencies": {
+          "AIComFramework.Core": "[1.0.0, )"
+        }
       }
     }
   }

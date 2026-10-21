@@ -1,4 +1,7 @@
 using System.Text.Json;
+using AIComFramework.Abstractions.Results;
+using AIComFramework.Abstractions.Validation;
+using AIComFramework.Core.Validation;
 using AIComFramework.Abstractions.Conversations;
 using AIComFramework.Abstractions.Trust;
 using AIComFramework.Core.Composition;
@@ -99,6 +102,41 @@ public sealed class AiConversation
             var exchange = ConversationExchange.Capture(request, response);
             lock (_stateLock) _turns = _turns.Add(new(_turns.Length + 1L, request, exchange));
             return response;
+        }
+        finally { ExitOperation(); }
+    }
+
+    /// <summary>Sends once with explicit result outcomes; rejected candidates do not change history.</summary>
+    /// <param name="prompt">Untrusted user input.</param>
+    /// <param name="contract">Optional result requirements; omitted means no domain checks.</param>
+    /// <param name="pipeline">Scoped pipeline required for selected validators.</param>
+    /// <param name="cancellationToken">Cancellation for provider and validators.</param>
+    /// <param name="history">Per-request history selection.</param>
+    /// <param name="configureRequest">Local configuration overrides.</param>
+    /// <param name="serializerOptions">JSON contracts including required properties.</param>
+    /// <param name="useJsonSchema">Whether to request provider schema support.</param>
+    /// <returns>The candidate, attempted request, parsing diagnostic and domain findings.</returns>
+    public async Task<AiValidatedResult<T>> SendValidatedAsync<T>(string prompt, AiResultContract<T>? contract = null,
+        AiValidationPipeline? pipeline = null, CancellationToken cancellationToken = default,
+        HistoryOptions? history = null, Action<AiRequestConfiguration>? configureRequest = null,
+        JsonSerializerOptions? serializerOptions = null, bool useJsonSchema = true)
+    {
+        ArgumentNullException.ThrowIfNull(prompt);
+        EnterOperation();
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var request = CreateRequest(prompt, history, configureRequest);
+            var (result, response) = await _executor.SendValidatedAsync(request, contract ?? new(), pipeline,
+                serializerOptions ?? JsonSerializerOptions.Default, useJsonSchema, cancellationToken).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (result.HasResult && result.Validation.Status is AiValidationStatus.Valid or AiValidationStatus.NotValidated)
+            {
+                var exchange = ConversationExchange.Capture(request, response);
+                lock (_stateLock)
+                    _turns = _turns.Add(new(_turns.Length + 1L, request, exchange) { Validation = result.Validation });
+            }
+            return result;
         }
         finally { ExitOperation(); }
     }

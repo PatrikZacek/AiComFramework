@@ -8,6 +8,7 @@
     <Project Path="src/AIComFramework.Serialization.Json/AIComFramework.Serialization.Json.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/AIComFramework.Tests.Shared/AIComFramework.Tests.Shared.csproj" />
     <Project Path="tests/AIComFramework.Tests.Integration/AIComFramework.Tests.Integration.csproj" />
     <Project Path="tests/AIComFramework.Tests.Unit/AIComFramework.Tests.Unit.csproj" />
   </Folder>

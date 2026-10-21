@@ -1,6 +1,6 @@
 using AIComFramework.Core.Conversations;
 using AIComFramework.Core.Trust;
-using AIComFramework.Tests.Fixtures;
+using AIComFramework.Tests.Shared.Fixtures;
 using Microsoft.Extensions.AI;
 
 namespace AIComFramework.Tests.Integration.Providers;

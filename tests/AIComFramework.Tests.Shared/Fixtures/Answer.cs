@@ -1,4 +1,4 @@
-namespace AIComFramework.Tests.Fixtures;
+namespace AIComFramework.Tests.Shared.Fixtures;
 
 /// <summary>Structured provider test response.</summary>
 /// <param name="Value">The returned answer.</param>
