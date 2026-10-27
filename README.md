@@ -124,6 +124,51 @@ Conversation sends, previews and configuration reject overlapping operations. Co
 
 Configure model/provider defaults in your registered client or its middleware. The framework neither replaces `IChatClient` nor owns its lifetime. Provider exceptions and cancellation propagate. Cancellation is checked before dispatch and after provider completion, including for clients that return after cancellation. An empty response message list or non-assistant/non-text content cannot be recorded as a completed conversation turn. No real API credentials are needed by the tests or sample.
 
+## Optional result validation
+
+Model execution, JSON parsing and domain validation are separate boundaries. Existing `SendAsync` methods retain their SDK response types and make no domain-validation claim. Use `Expect<T>()` for an explicit result envelope: without validators its domain status is `NotValidated`.
+
+```csharp
+using AIComFramework.Core.Validation;
+using AIComFramework.Abstractions.Results;
+using AIComFramework.Abstractions.Validation;
+using AIComFramework.Samples.Console.Validation; // Replace with your application types.
+
+services.AddAIComFramework()
+    .AddAiResultValidator<InvoiceAnalysis, InvoiceAmountValidator>()
+    .AddAiResultValidator<InvoiceAnalysis, InvoiceCurrencyValidator>();
+services.AddSingleton<InvoiceLedger>();
+
+// Resolve from the application's scope after building its provider.
+var pipeline = scope.ServiceProvider.GetRequiredService<AiValidationPipeline>();
+var result = await billing.Compose(client).Prompt("Extract the invoice.")
+    .Expect<InvoiceAnalysis>(pipeline: pipeline)
+    .ValidateWith<InvoiceAmountValidator>()
+    .ValidateWith<InvoiceCurrencyValidator>()
+    .SendAsync();
+
+if (result.HasResult && result.Validation.Status == AiValidationStatus.Valid)
+{
+    var invoice = result.GetValidatedValue(); // Satisfies configured checks only.
+}
+// Candidate, RawText, StructuralError and Validation.Findings support explicit fallback/diagnostics.
+
+var contract = new AiResultContract<InvoiceAnalysis>()
+    .ValidateWith<InvoiceAmountValidator>()
+    .ValidateWith<InvoiceCurrencyValidator>();
+var turnResult = await conversation.SendValidatedAsync("Extract the invoice.", contract, pipeline);
+```
+
+`Expect` captures the composed request immediately; finish prompt selection before calling it. Contracts and typed request selections are immutable. Validators are standard scoped DI components implementing `IAiResultValidator<T>`; they receive the candidate, configuration IDs, correlation ID and optional explicit reference strings, not conversation contents. Missing validator registration fails before provider dispatch.
+
+Required checks run sequentially in selection order. Any known violation yields `Invalid`; otherwise insufficient evidence yields `Unverifiable`; all passing checks yield `Valid`. Findings are retained even after a failure. Empty contracts yield `NotValidated`. Passing configured checks neither establishes universal correctness nor authorizes a business operation.
+
+Structural failures (including missing C# `required` properties) produce `HasResult == false` and `StructuralError`, with raw text retained. Domain validators are skipped: domain status is `Unverifiable` when requested, otherwise `NotValidated`. The SDK parser implements the supplied JSON type contract, not every JSON Schema constraint. Provider, DI, unexpected converter/validator and infrastructure exceptions propagate unchanged; cancellation propagates throughout. Missing authoritative evidence is an explicit validator finding, distinct from an unavailable dependency. No automatic retry or repair occurs.
+
+Conversation validation uses the existing operation gate. Valid and explicitly unvalidated typed responses commit detached text and findings; invalid, unverifiable and structurally failed responses leave history unchanged. Returned results retain the attempted request for application-owned auditing. Typed candidates and mutable SDK responses are not stored in history. Legacy turns explicitly report `NotValidated`.
+
+The [invoice sample](samples/AIComFramework.Samples.Console/Validation/InvoiceValidationDemo.cs) executes all four domain outcomes using a fake model, two independent validators and an application-owned ledger without credentials.
+
 ## Trust and limitations
 
 Raw prompts and `Untrusted.From` values remain user data in JSON envelopes with provenance. `Trusted.From` is an explicit application-controlled instruction path. JSON escaping and typed wrappers prevent some accidental composition errors; they do not eliminate semantic prompt injection.
@@ -133,6 +178,10 @@ This implementation supports complete text requests and text conversation respon
 No measured token, cost or quality improvement is claimed.
 
 The solution separates provider-independent definition/snapshot contracts in `AIComFramework.Abstractions` from registration, composition and conversation behavior in `AIComFramework.Core`. Test projects exercise isolated invariants and cross-component SDK/DI behavior. The executable sample demonstrates the public API with two domains. All projects enable nullable analysis, XML documentation and warnings as errors.
+
+Reusable test fixtures live in `AIComFramework.Tests.Shared`, a separate non-packable helper project referenced by both test projects through ordinary `ProjectReference` entries. Fixtures are compiled once, with no linked folders or duplicate source files. Production projects do not reference test infrastructure.
+
+After restoring packages, run `./tools/Verify-Solution.ps1` to audit solution membership, physical files versus evaluated MSBuild items (Debug, Release and design-time), source ownership, links, duplicate source bodies and reference cycles. Test-runner binary assets imported by NuGet are checked separately from project-owned sources.
 
 ## Optional definition serialization
 
