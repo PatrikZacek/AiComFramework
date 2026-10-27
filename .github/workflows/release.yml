@@ -1,0 +1,116 @@
+name: NuGet release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nuget-release
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: pwsh
+    outputs:
+      version: ${{ steps.verify.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          global-json-file: global.json
+      - name: Validate tag version and main ancestry
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: ./eng/Validate-Release.ps1 -Tag $env:RELEASE_TAG
+      - name: Build, test, pack, smoke test and reproduce
+        id: verify
+        run: ./eng/Build-Verify.ps1
+      - name: Preserve the exact verified release artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-packages
+          path: |
+            ${{ steps.verify.outputs.packages }}/*
+            ${{ steps.verify.outputs.manifest }}
+          if-no-files-found: error
+          retention-days: 14
+      - name: Preserve test results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-tests
+          path: artifacts/**/test-results/*.trx
+          if-no-files-found: ignore
+          retention-days: 14
+
+  publish:
+    # Disabled by default. Enable only after explicit owner authorization and environment protection setup.
+    if: github.repository == 'PatrikZacek/AiComFramework' && vars.NUGET_PUBLISH_ENABLED == 'true'
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: nuget.org
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      # Deliberately no source checkout or package build in the credential-bearing job.
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: '10.0.302'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-packages
+          path: packages
+      - name: Verify artifact hashes and exact allowlist before obtaining credentials
+        env:
+          PACKAGE_VERSION: ${{ needs.verify.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $expected = @('AIComFramework.Abstractions', 'AIComFramework.Core', 'AIComFramework.Serialization.Json') |
+            ForEach-Object { "$_.${env:PACKAGE_VERSION}.nupkg"; "$_.${env:PACKAGE_VERSION}.snupkg" }
+          $actual = @(Get-ChildItem packages -File | Where-Object Name -NE SHA256SUMS)
+          if (@(Compare-Object ($expected | Sort-Object) ($actual.Name | Sort-Object)).Count) { throw 'Unexpected release package set.' }
+          $lines = @(Get-Content packages/SHA256SUMS)
+          if ($lines.Count -ne 6) { throw 'Expected six package checksums.' }
+          $seen = @()
+          foreach ($line in $lines) {
+            if ($line -cnotmatch '^([0-9a-f]{64})  ([A-Za-z0-9.-]+)$') { throw 'Invalid manifest entry.' }
+            $hash = $Matches[1]; $name = $Matches[2]
+            if ($name -cnotin $expected -or $name -cin $seen) { throw 'Invalid or repeated package name.' }
+            $seen += $name
+            if ((Get-FileHash (Join-Path packages $name) -Algorithm SHA256).Hash.ToLowerInvariant() -cne $hash) { throw "Checksum mismatch: $name" }
+          }
+      - name: Obtain short-lived NuGet credential
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+      - name: Publish the verified packages and their matching symbols
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($package in Get-ChildItem packages/*.nupkg | Sort-Object Name) {
+            dotnet nuget push $package.FullName --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json --skip-duplicate
+            if ($LASTEXITCODE -ne 0) { throw "Publishing $($package.Name) failed." }
+          }
+          # Explicit symbol push also makes a partial release retry recover missing symbols.
+          foreach ($symbols in Get-ChildItem packages/*.snupkg | Sort-Object Name) {
+            dotnet nuget push $symbols.FullName --api-key $env:NUGET_API_KEY --source https://api.nuget.org/v3/index.json --skip-duplicate
+            if ($LASTEXITCODE -ne 0) { throw "Publishing $($symbols.Name) failed." }
+          }

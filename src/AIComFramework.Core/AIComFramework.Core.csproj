@@ -1,4 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Explicit AI request composition, domain catalogs, conversation history and result validation built on Microsoft.Extensions.AI.</Description>
+  </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\AIComFramework.Abstractions\AIComFramework.Abstractions.csproj" />

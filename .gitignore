@@ -4,3 +4,4 @@
 .nuget/
 TestResults/
 .idea/
+artifacts/
