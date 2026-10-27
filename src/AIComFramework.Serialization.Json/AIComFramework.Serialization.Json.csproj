@@ -1,4 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Strict System.Text.Json serialization of AIComFramework declarative definitions, independent of AIComFramework.Core.</Description>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../AIComFramework.Abstractions/AIComFramework.Abstractions.csproj" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.13" />

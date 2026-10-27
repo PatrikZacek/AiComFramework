@@ -1,4 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-
+  <PropertyGroup>
+    <Description>Provider-independent contracts for AI domains, roles, rules, trust, conversation snapshots, validation and definition serialization.</Description>
+  </PropertyGroup>
 </Project>

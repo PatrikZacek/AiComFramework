@@ -2,18 +2,49 @@
 
 AIComFramework is a .NET library for defining AI behavior once and composing each request explicitly. It replaces scattered prompt assembly with typed domain catalogs, reusable roles/rules, explicit trust values and independently managed conversations.
 
+## Packages and installation
+
+The repository prepares three packages for **.NET 10** at version **0.1.0-alpha.1**.
+Preparing a package or merging this change does not publish it to NuGet.org. See
+[packaging and releases](docs/Packaging.md) for the local feed and publication prerequisites.
+
+| Package | Purpose | Framework dependencies |
+| --- | --- | --- |
+| `AIComFramework.Abstractions` | Contracts, trust values, roles/rules and snapshots | None |
+| `AIComFramework.Core` | Composition, conversations, DI and result validation | Abstractions; Microsoft.Extensions.AI; DI abstractions |
+| `AIComFramework.Serialization.Json` | Strict JSON definition serialization and DI registration | Abstractions; DI abstractions |
+
+Core does not depend on the JSON adapter. The JSON adapter does not depend on Core.
+Install Core for normal application usage; add the JSON adapter only for definition serialization.
+For a locally built feed (replace `<feed>` with the verified packages directory):
+
+```sh
+dotnet add package AIComFramework.Core --version 0.1.0-alpha.1 --no-restore
+dotnet add package AIComFramework.Serialization.Json --version 0.1.0-alpha.1 --no-restore
+dotnet restore --source <feed> --source https://api.nuget.org/v3/index.json
+```
+
+Both main packages and portable PDB symbol packages contain commit-specific repository metadata.
+Samples and tests are built and tested but never packed. The library is licensed under
+the [MIT license](LICENSE); dependencies retain their own licenses.
+
 ## Build and run
 
-Requires .NET 10 (SDK baseline 10.0.302). From the solution directory:
+Requires exactly .NET SDK 10.0.302 and PowerShell 7 for verification scripts. From the solution directory:
 
 ```sh
 dotnet restore --locked-mode
-dotnet build --no-restore
-dotnet test --no-build --no-restore
-dotnet run --project samples/AIComFramework.Samples.Console --no-build
+dotnet build -c Release --no-restore -p:ContinuousIntegrationBuild=true
+dotnet test -c Release --no-build --no-restore
+dotnet pack -c Release --no-build --no-restore -o artifacts/packages -p:ContinuousIntegrationBuild=true
+dotnet run -c Release --project samples/AIComFramework.Samples.Console --no-build
 ```
 
-Reference `src/AIComFramework.Core/AIComFramework.Core.csproj` from your application. No AIComFramework package has been published. Core uses Microsoft.Extensions.AI 10.11.0 and Microsoft.Extensions.DependencyInjection.Abstractions 10.0.13; transitive versions are recorded in package lock files. The executable sample and DI integration tests use Microsoft.Extensions.DependencyInjection 10.0.0.
+For the complete build/test/pack, package inspection, isolated consumer smoke test and
+rebuild comparison, run `pwsh -File eng/Build-Verify.ps1`. No live model, API key or
+publishing credential is needed. CI runs this on Linux and Windows.
+
+Core uses Microsoft.Extensions.AI 10.11.0 and Microsoft.Extensions.DependencyInjection.Abstractions 10.0.13; transitive versions and content hashes are recorded in committed lock files and CI restores in locked mode. The executable sample and DI integration tests use Microsoft.Extensions.DependencyInjection 10.0.0. Package versioning is centralized in `eng/Versions.props`.
 
 ## Define a domain
 
